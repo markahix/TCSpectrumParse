@@ -1,53 +1,24 @@
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <map>
-#include <experimental/filesystem>
-#include <sstream>
-#include <cmath>
-#include <algorithm>
-#include <cctype>
-#include <locale>
-#include <vector>
-#include <cstdio>
-#include <memory>
-#include <stdexcept>
-#include <array>
-#include <iomanip>
-#include <ctime>
-#include <set>
+#include "classes.h"
+#include "utilities.h"
 
+bool DEBUGGING = false;
 
-
-std::string tc_jobtype(std::string filename)
+int main(int argc, char** argv)
 {
-    std::ifstream file(filename);
-    std::string line;
-    std::stringstream dummy;
-    while (getline(file,line))
-    {
-        if (line.find("RUNNING AB INITIO MOLECULAR DYNAMICS") != std::string::npos)
-        {
-            // need to extract many sets of values
-            return "BOMD";
-        }
-        if (line.find("RUNNING GEOMETRY OPTMIZATION") != std::string::npos)
-        {
-            // need to extract only one set of values
-            return "OPT";
-        }
-        if (line.find("SINGLE POINT ENERGY CALCULATIONS") != std::string::npos)
-        {
-            // need to extract only one set of values
-            return "SPE";
-        }
+    /* 
+        This program parses TeraChem output files into a CSV to allow 
+        for more standardized processing/plotting via python scripts.
 
-    }
-}
+        Accepted command line arguments are "-debug" and filenames.
+        Filenames given with wildcards (*) should be expanded by the shell itself,
+        and each filename given is checked for existence before being included in the list to process.
+        Missing files will be listed to the end user during initialization.
+    */
+   
+    // Obtain filenames/wildcards/list from arguments, validate as we go!
+    std::vector <std::string> file_list = get_file_list(argc,argv);
 
-int main()
-{
-    // This program parses TeraChem output files into a CSV to allow for more standardized processing/plotting via python scripts.
+    // Iterate through file list:    
 
     // 1. Verify the file is a TeraChem output file.
 
