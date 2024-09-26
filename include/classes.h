@@ -22,13 +22,10 @@
 
 class JobSettings
 {
-private:
+public:
     std::string inputfile;
     std::string runtype;
     std::string calctype;
-    
-    /* data */
-public:
     JobSettings(std::string filename);
     ~JobSettings();
 };
