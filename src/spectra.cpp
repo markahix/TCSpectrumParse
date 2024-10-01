@@ -20,9 +20,9 @@ std::vector<double> gauss(double a, double x_naught)
     std::vector<double> results;
 
     // generate 200nm to 800nm array, increment by 1nm
-    for (int i=200; i <=800; i++)
+    for (int i=800; i >=200; i--)
     {
-        x_array.push_back((double)i);
+        x_array.push_back(ev_to_nm((double)i));
     }
     
     // populate results array with gaussian values at each nm.

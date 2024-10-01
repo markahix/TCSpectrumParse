@@ -45,8 +45,8 @@ JobSettings::JobSettings(std::string filename)
     if (calctype == "" || runtype == "")
     {
         buffer.str("");
-        buffer << "Unable to parse input file for calculation/run types:" << std::endl;
-        buffer << "\t" << filename << std::endl;
+        buffer << "Unable to parse input file for calculation/run types:";
+        buffer << "\t" << filename;
         debug(buffer.str());
     }
 

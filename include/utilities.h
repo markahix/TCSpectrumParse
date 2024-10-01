@@ -24,4 +24,6 @@ extern bool DEBUGGING;
 
 void debug(std::string printstring);
 std::vector<std::string> get_file_list(int argc, char** argv);
+void silent_shell(const char* cmd);
+
 #endif
