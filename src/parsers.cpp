@@ -208,7 +208,57 @@ void parse_spe(JobSettings current)
         MD_spectra.push_back(tmpvec);
     }
     debug("Parsing SPE outfile.");
- 
+    while (getline(file,line))
+    {
+        block.push_back(line);
+    }
+
+    std::vector<double> block_energies = parse_text_block(current,block);
+    for (int i=0; i < block_energies.size(); i++)
+    {
+        MD_spectra[i].push_back(block_energies[i]); // each "column" of the MD_spectra 2D-array consists of the energies of a single 
+    }
+    // then clear the vector
+    block.clear();
+
+    // Now that we've parsed the whole file and built a 2D array, let's write the array to a CSV file of the same filename.
+    std::string outfilename = current.inputfile.substr(0,current.inputfile.find('.')) + ".csv";
+    std::ofstream outfile(outfilename,std::ios::app);
+    for (int i=0; i < MD_spectra.size(); i++)
+    {
+        outfile << std::fixed;
+        std::vector<double> row = MD_spectra[i];
+        for (double j : row)
+        {
+            outfile << j << " ";
+        }
+        outfile << std::endl;
+    }
+    outfile.close();
+
+    std::ofstream python(".plotthis.py",std::ios::app);
+    python << R""""(
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+def csv_to_spectra_plot(csvfile,outfile):
+    data = np.genfromtxt(csvfile,dtype=float)
+    eV = 1239.8/data[:,0]
+    fig = plt.figure(figsize=[8,6],dpi=300,facecolor="white")
+    ax = fig.add_subplot(1,1,1)
+    y_data = data[:,1]
+    ax.plot(eV,y_data,color="k",lw=1.0,alpha=1.0)
+
+    ax.set_xlabel("Energy (nm)")
+    ax.set_xlim(min(eV),max(eV))
+    ax.set_ylim(0,None)
+    ax.set_ylabel("Intensity (a.u.)")
+    fig.savefig(outfile,dpi=300,facecolor="white")
+)"""";
+    python << "csv_to_spectra_plot('" << outfilename << "','" << outfilename.substr(0,outfilename.size()-3) << "png')" << std::endl;
+
+    silent_shell("python .plotthis.py; rm .plotthis.py");
 }
 
 
@@ -231,6 +281,7 @@ void parse_opt(JobSettings current)
     {
         if (line.find("Final Excited State Results:") != std::string::npos)
         {
+            // We only want the final optimized results, not the entire process.
             block.clear();
         }
         block.push_back(line);
