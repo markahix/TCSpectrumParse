@@ -39,7 +39,7 @@ std::vector<double> parse_text_block(JobSettings current, std::vector<std::strin
                 // run through text block until we hit "State Averaged Energy"
                 S1_energy = stof( line.substr( line.find(':') + 1, std::string::npos ) );
             }
-            if (line.find("Root   Mult.   Total Energy (a.u.)   Ex. Energy (a.u.)     Ex. Energy (eV)     Ex. Energy (nm)") != std::string::npos)
+            if (line.find("Root   Mult.   Total Energy (a.u.)   Ex. Energy (a.u.)     Ex. Energy (eV)") != std::string::npos)
             {
                 std::stringstream buffer;
                 buffer.str(block[i+2]);
@@ -174,12 +174,12 @@ def csv_to_spectra_plot(csvfile,outfile):
     cumulative = np.zeros(len(data[:,0]))
     fig = plt.figure(figsize=[8,6],dpi=300,facecolor="white")
     ax = fig.add_subplot(1,1,1)
-    for step in range(1,len(data)-1):
+    for step in range(1,len(data[0])-1):
         y_data = data[:,step]
         cumulative+=y_data
         ax.plot(eV,y_data,color=colors[step],lw=0.5,alpha=0.5)
 
-    cumulative /= (len(data[:,0])-1)
+    cumulative /= (len(data[0])-1)
     ax.plot(eV,cumulative,color="k",lw=1.0)
     ax.set_xlabel("Energy (nm)")
     ax.set_xlim(min(eV),max(eV))

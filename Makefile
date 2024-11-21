@@ -3,7 +3,7 @@ CC=g++
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
-INS_DIR := ~/bin
+INS_DIR := /wsu/home/groups/walkerlab/GroupScripts
 
 EXE := $(BIN_DIR)/tcparse
 SRC := $(wildcard $(SRC_DIR)/*.cpp)
