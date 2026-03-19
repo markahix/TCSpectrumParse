@@ -10,4 +10,6 @@ std::vector<double> gauss(double a, double x_naught);
 
 
 
+
+
 #endif

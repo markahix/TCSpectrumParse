@@ -2,3 +2,7 @@
 obj/
 bin/
 test_data/
+*.out
+*.png
+*.csv
+*.log

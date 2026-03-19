@@ -32,7 +32,15 @@ int main(int argc, char** argv)
         }
         else if (current.runtype == "BOMD")
         {
-            parse_bomd(current);
+            if (current.calctype == "SA-CASSCF")
+            {
+                BOMD_SACASSCF_to_CSV(it);
+            }
+            else
+            {
+                parse_bomd(current);
+            }
+            
         }
         else if (current.runtype == "SPE")
         {
@@ -41,6 +49,11 @@ int main(int argc, char** argv)
     }
 
     // Notes:  If multiple files, output results of each file to a csv of the same filename?
+    if (file_list.size() > 1)
+    {
+        // make multi-line plot
+        plot_multi_csv(file_list);
+    }
 
     return 0;
 }

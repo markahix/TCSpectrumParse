@@ -25,11 +25,11 @@ std::vector<double> parse_text_block(JobSettings current, std::vector<std::strin
     
     if (current.calctype == "SA-CASSCF")
     {
-        double S0_energy,S1_energy;
+        double S0_energy, S1_energy;
         double Oscillator = 0.0;
         std::string dummy;
         
-        int start_osc,end_osc;
+        int start_osc, end_osc;
 
         for (int i=0; i < block.size(); i++)
         {
@@ -61,6 +61,8 @@ std::vector<double> parse_text_block(JobSettings current, std::vector<std::strin
                     std::string tmp;
                     std::stringstream buffer;
                     buffer.str(block[j]);
+                    //           1       ->      2    -0.0602    0.5597   -0.5861   0.8127   0.0138
+                    // buffer >> S_0 >> junk >> S_1 >> x_comp >> y_comp >> z_comp >> norm >> osc;
                     buffer >> tmp >> tmp >> tmp >> tmp >> tmp >> tmp >> tmp >> tmp;
                     debug("Oscillator value is: " + tmp);
                     Oscillator += stof(tmp);
@@ -174,7 +176,7 @@ def csv_to_spectra_plot(csvfile,outfile):
     cumulative = np.zeros(len(data[:,0]))
     fig = plt.figure(figsize=[8,6],dpi=300,facecolor="white")
     ax = fig.add_subplot(1,1,1)
-    for step in range(1,len(data[0])-1):
+    for step in range(1,len(data[:,0])-1):
         y_data = data[:,step]
         cumulative+=y_data
         ax.plot(eV,y_data,color=colors[step],lw=0.5,alpha=0.5)
@@ -189,9 +191,8 @@ def csv_to_spectra_plot(csvfile,outfile):
 )"""";
     python << "csv_to_spectra_plot('" << outfilename << "','" << outfilename.substr(0,outfilename.size()-3) << "png')" << std::endl;
 
-    silent_shell("python .plotthis.py; rm .plotthis.py");
+    silent_shell("python .plotthis.py && rm .plotthis.py");
 }
-
 
 void parse_spe(JobSettings current)
 {
@@ -258,7 +259,7 @@ def csv_to_spectra_plot(csvfile,outfile):
 )"""";
     python << "csv_to_spectra_plot('" << outfilename << "','" << outfilename.substr(0,outfilename.size()-3) << "png')" << std::endl;
 
-    silent_shell("python .plotthis.py; rm .plotthis.py");
+    silent_shell("python .plotthis.py && rm .plotthis.py");
 }
 
 
@@ -331,6 +332,53 @@ def csv_to_spectra_plot(csvfile,outfile):
 )"""";
     python << "csv_to_spectra_plot('" << outfilename << "','" << outfilename.substr(0,outfilename.size()-3) << "png')" << std::endl;
 
-    silent_shell("python .plotthis.py; rm .plotthis.py");
+    silent_shell("python .plotthis.py && rm .plotthis.py");
 
+}
+
+
+void plot_multi_csv(std::vector<std::string> file_list)
+{
+    std::ofstream python(".plotthis.py",std::ios::app);
+    python << R""""(
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+    
+def csv_to_spectra_plot(csvfilelist,outfile):
+    fig = plt.figure(figsize=[8,6],dpi=300,facecolor="white")
+    ax = fig.add_subplot(1,1,1)
+    colors = [cm.get_cmap("viridis")(x) for x in np.linspace(0,1,len(csvfilelist))]
+
+    for i,csvfile in enumerate(csvfilelist):
+        data = np.genfromtxt(csvfile,dtype=float)    
+        if i == 0:
+            cumulative = np.zeros(len(data[:,0]))
+        eV = 1239.8/data[:,0]
+        y_data = data[:,1]
+	cumulative+=y_data
+        ax.plot(eV, y_data,color=colors[i],lw=1.0,alpha=1.0,label=csvfile)
+    cumulative /= len(csvfilelist)
+    ax.plot(eV, cumulative,color='k',lw=2.0,alpha=1.0)
+    ax.legend()
+    ax.set_xlabel("Energy (nm)")
+    ax.set_xlim(min(eV),max(eV))
+    ax.set_ylim(0,None)
+    ax.set_ylabel("Intensity (a.u.)")
+    fig.savefig(outfile,dpi=300,facecolor="white")
+    with open("Cumulative_data.csv","w") as f:
+        f.write("eV    CumulativeData\n") 
+        for en,y_d in zip(eV,cumulative):
+            f.write(f"{en}   {y_d}\n")
+        
+)"""";
+    python << "csv_to_spectra_plot([";
+    for (std::string it: file_list)
+    {
+        std::string curr_csv = it.substr(0,it.find('.')) + ".csv";
+        python << "'" << curr_csv << "',";
+    }
+    python << "],'multiplot.png')" << std::endl;
+
+    silent_shell("python .plotthis.py && rm .plotthis.py");   
 }

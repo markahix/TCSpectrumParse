@@ -1,5 +1,5 @@
 #include "spectra.h"
-
+#include "utilities.h"
 
 double ev_to_nm(double eV)
 {
@@ -16,11 +16,11 @@ std::vector<double> gauss(double a, double x_naught)
         def gauss(x, a, x0, sigma):
             return a * np.exp(-(x - x0)**2 / (2 * sigma**2))
     */
-    std::vector<double> x_array;
-    std::vector<double> results;
+    std::vector<double> x_array = {};
+    std::vector<double> results = {};
 
     // generate 200nm to 800nm array, increment by 1nm
-    for (int i=800; i >=200; i--)
+    for (int i=200; i <=800; i++)
     {
         x_array.push_back(ev_to_nm((double)i));
     }
@@ -32,5 +32,3 @@ std::vector<double> gauss(double a, double x_naught)
     }
     return results;
 }
-
-

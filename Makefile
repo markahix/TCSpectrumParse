@@ -3,11 +3,13 @@ CC=g++
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
-INS_DIR := /wsu/home/groups/walkerlab/GroupScripts
+INS_DIR := /rs/rs_grp_walkerlab/GroupScripts/
 
 EXE := $(BIN_DIR)/tcparse
+
 SRC := $(wildcard $(SRC_DIR)/*.cpp)
 OBJ := $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+
 
 CPPFLAGS := -Iinclude -MMD -MP
 CFLAGS   := -Wall
