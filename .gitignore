@@ -6,3 +6,5 @@ test_data/
 *.png
 *.csv
 *.log
+*.sh
+*.ipynb
