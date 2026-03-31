@@ -75,7 +75,7 @@ std::vector<double> parse_text_block(JobSettings current, std::vector<std::strin
 
     else if (current.calctype == "TDDFT")
     {   
-        for (int i=0;i < block.size(); i++)
+        for (int i=0; i < block.size(); i++)
         {
             std::string line=block[i];
             if (line.find("  Final Excited State Results:") != std::string::npos)
@@ -262,7 +262,6 @@ def csv_to_spectra_plot(csvfile,outfile):
     silent_shell("python .plotthis.py && rm .plotthis.py");
 }
 
-
 void parse_opt(JobSettings current)
 {
     std::string line;
@@ -356,7 +355,7 @@ def csv_to_spectra_plot(csvfilelist,outfile):
             cumulative = np.zeros(len(data[:,0]))
         eV = 1239.8/data[:,0]
         y_data = data[:,1]
-	cumulative+=y_data
+        cumulative+=y_data
         ax.plot(eV, y_data,color=colors[i],lw=1.0,alpha=1.0,label=csvfile)
     cumulative /= len(csvfilelist)
     ax.plot(eV, cumulative,color='k',lw=2.0,alpha=1.0)
