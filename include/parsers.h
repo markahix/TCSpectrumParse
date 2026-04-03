@@ -3,7 +3,6 @@
 
 #include "classes.h"
 #include "utilities.h"
-#include "spectra.h"
 
 void parse_bomd(JobSettings current);
 void parse_spe(JobSettings current);

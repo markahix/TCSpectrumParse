@@ -1,6 +1,6 @@
 #include "utilities.h"
 #include "parsers.h"
-#include "spectra.h"
+
 
 /*
 Need BOMD/SA-CASSCF parser with multiple transitions accounted for.

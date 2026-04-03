@@ -43,7 +43,9 @@ class TimeStep
         ~TimeStep();
         // each timestep has an map of transitions, with corresponding Excitation Data
         std::map<std::string, Excitation> excitations;
+        std::map<std::string, std::vector<double>> spectral_data;
         void AddExcitation(std::string transition_name, double ene, double osc_str);
+        void GenerateSpectralData(std::vector<double> ev_ranges);
 };
 
 class OverallDataStructure
@@ -51,6 +53,9 @@ class OverallDataStructure
     private:
         double min_nm;
         double max_nm;
+        std::vector<double> ev_ranges;
+        std::vector<double> nm_ranges;
+
         std::string output_csv_filename;
         std::string output_png_filename;
         std::vector<std::string> known_transition_names;
@@ -74,6 +79,7 @@ class OverallDataStructure
         void AddTimestep();
         void AddExcitation(std::string transition_name, double ene, double osc_str);
         void PlotSpectra();
+        void reset();
 };
 
 
