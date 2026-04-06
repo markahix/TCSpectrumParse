@@ -29,5 +29,9 @@ void silent_shell(const char* cmd);
 double ev_to_nm(double ev);
 std::vector<double> gauss(double a, double x_naught);
 std::vector<double> gauss(double a, double x_naught, std::vector<double> ev_ranges);
+double gauss_at_energy(double osc, double energy_peak, double energy_eval);
+std::string GetRunType(std::string filename);
+std::string GetCalcType(std::string filename);
 
+std::string Combine_CSVs(std::vector<std::string> csv_filenames);
 #endif

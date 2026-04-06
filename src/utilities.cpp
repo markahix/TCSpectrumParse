@@ -16,6 +16,10 @@ void debug(std::string printstring)
 
 std::vector<std::string> get_file_list(int argc, char** argv)
 {
+    if (std::experimental::filesystem::exists("tcparse.log"))
+    {
+        std::experimental::filesystem::remove("tcparse.log");
+    }
     std::stringstream buffer;
     std::vector <std::string> file_list; 
     for (int i=1; i < argc; i++)
@@ -98,4 +102,118 @@ std::vector<double> gauss(double a, double x_naught, std::vector<double> ev_rang
         results.push_back( a * exp( -200 * pow(x - x_naught, 2) ) );
     }
     return results;
+}
+
+double gauss_at_energy(double osc, double energy_peak, double energy_eval)
+{
+    return osc * exp( -200 * pow(energy_eval - energy_peak, 2) );
+}
+
+std::string GetRunType(std::string filename)
+{
+    std::stringstream buffer;
+    std::ifstream file(filename, std::ios::in);
+    std::string line;
+    std::string calctype = "";
+    while (getline(file,line))
+    {
+        buffer.str("");
+        // IDENTIFY RUNTYPE
+        if (line.find("RUNNING AB INITIO MOLECULAR DYNAMICS") != std::string::npos)
+        {
+            // need to extract many sets of values
+            calctype = "BOMD";
+        }
+        if (line.find("RUNNING GEOMETRY OPTMIZATION") != std::string::npos)
+        {
+            // need to extract only one set of values
+            calctype = "OPT";
+        }
+        if (line.find("SINGLE POINT ENERGY CALCULATIONS") != std::string::npos)
+        {
+            // need to extract only one set of values
+            calctype = "SPE";
+        }
+    }
+    file.close();
+    return calctype;
+}
+
+std::string GetCalcType(std::string filename)
+{
+    std::stringstream buffer;
+    std::ifstream file(filename, std::ios::in);
+    std::string line;
+    std::string runtype = "";
+    while (getline(file,line))
+    {
+        buffer.str("");
+         // IDENTIFY CALCTYPE
+        if (line.find("CAS Parameters") != std::string::npos)
+        {
+            // I'm assuming CASSCF calculation will be the only one listing out CAS parameters...
+            
+            runtype = "SA-CASSCF";
+        }
+        if (line.find("DFT Functional requested") != std::string::npos)
+        {
+            runtype = "TDDFT";
+        }
+    }
+    file.close();
+    return runtype;
+}
+
+std::string Combine_CSVs(std::vector<std::string> csv_filenames)
+{
+    std::string base_dir = csv_filenames[0].substr(0,csv_filenames[0].find_last_of('/')+1);
+    std::stringstream buffer;
+    int n_files_found = 0;
+    do 
+    {
+        buffer.str("");
+        n_files_found++;
+        buffer << base_dir << "Combined_Data_" << std::setw(4) << std::setfill('0') << n_files_found << ".csv";
+    } while(std::experimental::filesystem::exists(buffer.str()));
+    std::string combined_csv_filename = buffer.str();
+    std::cout << "Combining CSVs into " << combined_csv_filename << std::endl;
+
+    // Ensure header columns in all files match.
+    std::string header_columns;
+    for (int i = 0; i < csv_filenames.size(); i++)
+    {
+        std::ifstream file(csv_filenames[i], std::ios::in);
+        std::string line;
+        getline(file,line);
+        file.close();
+        if (i == 0)
+        {
+            header_columns = line;
+        }
+        else
+        {
+            if (line != header_columns)
+            {
+                std::cout << "Mismatch in header columns.  Terminating. " << std::endl;
+                exit(1);
+            }
+        }
+    }
+
+    // Iterate through all CSVs, output their contents into the combined form.
+    std::ofstream comb_csv(combined_csv_filename, std::ios::out);
+    comb_csv << header_columns << std::endl;
+    for (int i = 0; i < csv_filenames.size(); i++)
+    {
+        std::ifstream file(csv_filenames[i], std::ios::in);
+        std::string line;
+        getline(file,line); // skip header columns, we only need them once.
+        while (getline(file,line))
+        {
+            comb_csv << line << std::endl;
+        }
+        file.close();
+    }
+    comb_csv.close();
+    return combined_csv_filename;
 }

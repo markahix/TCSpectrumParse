@@ -1,197 +1,95 @@
 #include "classes.h"
 #include "utilities.h"
 
-JobSettings::JobSettings(std::string filename)
+void ParseSPE(InputFile &input)
 {
-    inputfile = filename;
-    runtype = "";
-    calctype = "";
-
-    std::stringstream buffer;
-    std::ifstream file(filename);
     std::string line;
+    std::stringstream dummy;
+    std::vector<std::string> block;
+    std::ifstream file(input.filename(),std::ios::in);
+    while (getline(file, line))
+    {
+        block.push_back(line);
+    }
+    file.close();
+
+    if (input.getcalctype() == "TDDFT")
+    {
+        input.excitations = ParseTDDFTBlock(block);
+    }
+    if (input.getcalctype() == "SA-CASSCF")
+    {
+        input.excitations = ParseSACASSCFBlock(block);
+    }
+    input.Write_CSV();
+}
+
+void ParseOPT(InputFile &input)
+{
+    std::string line;
+    std::stringstream dummy;
+    std::vector<std::string> block;
+    std::ifstream file(input.filename(),std::ios::in);
     while (getline(file,line))
     {
-        buffer.str("");
-        // IDENTIFY RUNTYPE
-        if (line.find("RUNNING AB INITIO MOLECULAR DYNAMICS") != std::string::npos)
+        if (line.find("Final Excited State Results:") != std::string::npos)
         {
-            // need to extract many sets of values
-            runtype = "BOMD";
+            // We only want the final optimized results, not the entire process.
+            block.clear();
         }
-        if (line.find("RUNNING GEOMETRY OPTMIZATION") != std::string::npos)
+        block.push_back(line);
+    }
+    file.close();
+
+    if (input.getcalctype() == "TDDFT")
+    {
+        input.excitations = ParseTDDFTBlock(block);
+    }
+    if (input.getcalctype() == "SA-CASSCF")
+    {
+        input.excitations = ParseSACASSCFBlock(block);
+    }
+    input.Write_CSV();
+}
+
+void ParseBOMD(InputFile &input)
+{
+    std::string line;
+    std::stringstream dummy;
+    std::vector<std::string> block;
+    std::ifstream file(input.filename(),std::ios::in);
+    while (getline(file,line))
+    {
+        block.push_back(line);
+        if (line.find("MD STEP") != std::string::npos)
         {
-            // need to extract only one set of values
-            runtype = "OPT";
-        }
-        if (line.find("SINGLE POINT ENERGY CALCULATIONS") != std::string::npos)
-        {
-            // need to extract only one set of values
-            runtype = "SPE";
-        }
-        // IDENTIFY CALCTYPE
-        if (line.find("CAS Parameters") != std::string::npos)
-        {
-            // I'm assuming CASSCF calculation will be the only one listing out CAS parameters...
-            calctype = "SA-CASSCF";
-        }
-        if (line.find("DFT Functional requested") != std::string::npos)
-        {
-            calctype = "TDDFT";
-        }
-    }
-    
-    //Report failure
-    if (calctype == "" || runtype == "")
-    {
-        buffer.str("");
-        buffer << "Unable to parse input file for calculation/run types:";
-        buffer << "\t" << filename;
-        debug(buffer.str());
-    }
-
-    // Report results of parse.
-    if (calctype == "TDDFT")
-    {
-        buffer << filename << " is using TDDFT." << std::endl;
-        debug(buffer.str());
-    }
-    else if (calctype == "SA-CASSCF")
-    {
-        buffer << filename << " is using CASSCF." << std::endl;
-        debug(buffer.str());
-    }
-    if (runtype == "SPE")
-    {
-        buffer << filename << " calculation type is QM/MM single point energy." << std::endl;
-        debug(buffer.str());
-    }
-    else if (runtype == "OPT")
-    {
-        buffer << filename << " calculation type is QM/MM optimization." << std::endl;
-        debug(buffer.str());
-    }
-    else if (runtype == "BOMD")
-    {
-        buffer << filename << " calculation type is QM/MM-MD (Born-Oppenheimer Molecular Dynamics)." << std::endl;
-        debug(buffer.str());
-    }
-}
-
-JobSettings::~JobSettings()
-{
-}
-
-//
-/*
-struct Excitation
-{
-    std::string transition_name;
-    double energy;
-    double oscillator;
-};
-
-class OverallDataStructure
-{
-    public:
-        OverallDataStructure();
-        ~OverallDataStructure();
-        // each datastructure is composed of a sequence of timesteps, frames, or individual files that get parsed into their respective excitations.
-        std::vector<TimeStep> timesteps;
-        
-        // We can simply add any number of files to the mix, with each one being parsed into the datastructure as we go.
-        void AddInputFile(std::string filename);
-        void WriteOutputFile(std::string filename);
-        void AddTimestep();
-        void AddExcitation(std::string transition_name, double ene, double osc_str);
-};
-
-*/
-// TimeStep class functions
-TimeStep::TimeStep()
-{
-    // std::vector<Excitation> excitations;
-    excitations = {};
-}
-
-TimeStep::~TimeStep()
-{
-    
-}
-
-void TimeStep::AddExcitation(std::string transition_name, double ene, double osc_str)
-{
-    excitations[transition_name] = {ene,osc_str};
-}
-
-void TimeStep::GenerateSpectralData(std::vector<double> ev_ranges)
-{
-    for (std::map<std::string, Excitation>::iterator excite = excitations.begin(); excite != excitations.end(); excite++)
-    {
-        std::string t_name = excite->first;
-        double osc = excite->second.oscillator;
-        double ene = excite->second.energy;
-        spectral_data[t_name] = gauss(osc, ene, ev_ranges);
-    }    
-}
-
-// OverallDataStructure class functions
-OverallDataStructure::OverallDataStructure()
-{
-    min_nm = 200;
-    max_nm = 800;
-    known_transition_names = {};
-    // std::vector<TimeStep> timesteps;
-    timesteps = {};
-    std::stringstream buffer;
-    int file_count=0;
-    do
-    {
-        file_count++;
-        buffer.str("");
-        buffer << "ConsolidatedSpectralData_" << std::setw(4) << std::setfill('0') << file_count << ".csv";
-    } while (std::experimental::filesystem::exists(buffer.str()));
-    
-    output_csv_filename = buffer.str();
-    buffer.str("");
-    buffer << "ConsolidatedSpectralData_" << std::setw(4) << std::setfill('0') << file_count << ".png";
-    output_png_filename = buffer.str();
-}
-
-OverallDataStructure::~OverallDataStructure()
-{
-
-}
-
-void OverallDataStructure::UpdateMinMaxEnergyRange()
-{
-    // Iterate through all timesteps, get min and max values for excitation energies
-    for (TimeStep ts : timesteps)
-    {
-        // Iterate through all timesteps, generating spectral data for each transition
-        for (std::map<std::string, Excitation>::iterator exc = ts.excitations.begin(); exc != ts.excitations.end(); exc++)
-        {
-            // iterate through each excitation, identifying 
-            double ene = exc->second.energy;
-            if (min_nm > ev_to_nm(ene))
+            if (input.getcalctype() == "TDDFT")
             {
-                min_nm = ev_to_nm(ene);
+                input.excitations = ParseTDDFTBlock(block);
             }
-            if (max_nm < ev_to_nm(ene))
+            if (input.getcalctype() == "SA-CASSCF")
             {
-                max_nm = ev_to_nm(ene);
+                input.excitations = ParseSACASSCFBlock(block);
             }
+            input.Write_CSV();
+            block.clear();
         }
     }
-
-    // adding 20% of the min-max nm range to the ends of the spectrum.
-    double nm_range = (max_nm - min_nm) * .2; 
-    min_nm = std::round(min_nm - nm_range);
-    max_nm = std::round(max_nm + nm_range);    
+    file.close();
+    if (input.getcalctype() == "TDDFT")
+    {
+        input.excitations = ParseTDDFTBlock(block);
+    }
+    if (input.getcalctype() == "SA-CASSCF")
+    {
+        input.excitations = ParseSACASSCFBlock(block);
+    }
+    input.Write_CSV();
 }
 
-void OverallDataStructure::ParseTDDFTBlock(std::vector<std::string> block)
+std::vector<Excitation> ParseTDDFTBlock(std::vector<std::string> block)
 {
+    std::vector<Excitation> excitations = {};
     for (int i=0; i < block.size(); i++)
     {
         std::string line=block[i];
@@ -206,19 +104,23 @@ void OverallDataStructure::ParseTDDFTBlock(std::vector<std::string> block)
             // oscillators.push_back(stof(osci));
             debug("Excitation Energy: " + excite);
             debug("Oscillator: "+ osci);
-            AddExcitation("TDDFT", stof(excite), stof(osci));
+            Excitation newexcite = {stof(excite), stof(osci),"S0->S1"};
+            excitations.push_back(newexcite);
+            // AddExcitation("TDDFT", stof(excite), stof(osci));
         }
     }
+    return excitations;
 }
 
-void OverallDataStructure::ParseSACASSCFBlock(std::vector<std::string> block)
+std::vector<Excitation> ParseSACASSCFBlock(std::vector<std::string> block)
 {
+    std::vector<Excitation> excitations = {};
     std::map<std::string, double> state_energies = {};
     std::map<std::string, int> mult_count = {{"singlet",-1},{"doublet",-1},{"triplet",-1},{"quartet",-1}}; // Start at -1 so that the first encountered multiplicity state is S0, D0, T0, etc.
     std::map<std::string,std::string> multiplicity_prefixes = {{"singlet","S"},{"doublet","D"},{"triplet","T"},{"quartet","Q"}};
     std::vector<std::string> state_names = {};
     std::string current_mult = "S";
-    std::map<std::string,double> excitation_energies = {};
+    std::map<std::string, double> excitation_energies = {};
 
     for (int i = 0; i < block.size(); i++)
     {
@@ -327,204 +229,187 @@ void OverallDataStructure::ParseSACASSCFBlock(std::vector<std::string> block)
                 t_name.str("");
                 t_name << current_mult << from_state-1 <<  "->" << current_mult << to_state-1;
                 double curr_energy = excitation_energies[t_name.str()];
-                AddExcitation(t_name.str(), curr_energy, osc_str);
+                Excitation new_exc = {curr_energy, osc_str, t_name.str()};
+                excitations.push_back(new_exc);
                 i++;
                 line = block[i];
             }
         }
     }
+    return excitations;
+
 }
 
-void OverallDataStructure::ParseBlock(std::vector<std::string> block, std::string calctype)
+InputFile::InputFile(std::string filename)
 {
-    if (calctype == "TDDFT")
+    // Make sure output file is complete...
+    // std::ifstream file(filename,std::ios::in);
+    // std::string line;
+    bool is_valid=true;
+    // while(getline(file,line))
+    // {
+    //     if (line.find("Job finished") != std::string::npos)
+    //     {
+    //         is_valid = true;
+    //     }
+    // }
+    // file.close();
+    if (is_valid)
     {
-        ParseTDDFTBlock(block);
-    }
-    if (calctype == "SA-CASSCF")
-    {
-        ParseSACASSCFBlock(block);
-    }
-}
-
-void OverallDataStructure::ParseOPT(JobSettings current)
-{
-        std::string line;
-        std::stringstream dummy;
-        std::vector<std::string> block;
-        std::ifstream file(current.inputfile);
-        while (getline(file,line))
+        // Generate initial information from filename.
+        inputfile = filename;
+        outputcsv = filename.substr(0,filename.find_last_of('.'))+".csv";
+        if (std::experimental::filesystem::exists(outputcsv)) // Remove output csv for previous run.
         {
-            if (line.find("Final Excited State Results:") != std::string::npos)
+            std::experimental::filesystem::remove(outputcsv);
+        }
+        runtype = GetRunType(filename);
+        calctype = GetCalcType(filename);
+
+        // Report input file information
+        std::cout << "Input Filename:   " << inputfile << std::endl;
+        std::cout << "Output Filename:  " << outputcsv << std::endl;
+        std::cout << "Run type:         " << runtype << std::endl;
+        std::cout << "Calculation Type: " << calctype << std::endl << std::endl;
+    }
+    else
+    {
+        inputfile = filename;
+        runtype = "";
+        calctype = "";
+        std::cout << "Input File " << inputfile << " was found to be invalid." << std::endl;
+    }
+}
+
+InputFile::~InputFile()
+{
+
+}
+
+std::string InputFile::filename()
+{
+    return inputfile;
+}
+
+std::string InputFile::csvname()
+{
+    return outputcsv;
+}
+
+std::string InputFile::getruntype()
+{
+    return runtype;
+}
+
+std::string InputFile::getcalctype()
+{
+    return calctype;
+}
+
+void InputFile::Write_CSV()
+{
+    if (!std::experimental::filesystem::exists(outputcsv))
+    {
+        std::ofstream csv(outputcsv, std::ios::out);
+        csv << "Energy(eV), Energy(nm)";
+        for (Excitation ex: excitations)
+        {
+            csv << ", " << std::setw(8) << ex.transition_name;
+        }
+        csv << std::endl;
+        csv.close();
+    }
+    std::ofstream csv(outputcsv, std::ios::app);
+    if (!csv.is_open())
+    {
+        std::cout << "Unable to open " << outputcsv << " for writing.  Terminating run." << std::endl;
+        exit(1);
+    }
+    
+    if (excitations.size() > 0)
+    {
+        for (int i=1000; i > 199; i--)
+        {
+            double ev = 1239.8/((double)i);
+            csv << std::fixed << std::setprecision(4) << std::setw(10) << ev << ", ";
+            csv << std::fixed << std::setprecision(4) << std::setw(10) << (double)i;
+            for (Excitation ex: excitations)
             {
-                // We only want the final optimized results, not the entire process.
-                block.clear();
-            }
-            block.push_back(line);
+                double intensity = gauss_at_energy(ex.oscillator, ex.energy, ev);
+                csv << ", " << std::fixed << std::setprecision(4) << std::setw(8) << intensity;
+            } 
+            csv << std::endl;
         }
-        ParseBlock(block, current.calctype);
-        AddTimestep();
-        file.close();
+    }
+    csv.close();
+
+    // Clear the Excitations
+    excitations.clear();
+
 }
 
-void OverallDataStructure::ParseSPE(JobSettings current)
+void GeneratePythonPlottingScript(std::vector<std::string> csv_names)
 {
-    std::string line;
-    std::stringstream dummy;
-    std::vector<std::string> block;
-    std::ifstream file(current.inputfile);
-    while (getline(file,line))
-    {
-        block.push_back(line);
-    }
-    ParseBlock(block,current.calctype);
-    AddTimestep();
-    file.close();
-}
+    std::string python_script=R"PYTHON(#!/usr/bin/env python
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import sys
+from glob import glob as G
+import pandas as pd
 
-void OverallDataStructure::ParseBOMD(JobSettings current)
-{
-    std::string line;
-    std::stringstream dummy;
-    std::vector<std::string> block;
-    std::ifstream file(current.inputfile);
-    std::cout << "Opened " << current.inputfile << " for parsing." << std::endl;
-    int n_frames_parsed = 0;
-    while (getline(file,line))
-    {
-        block.push_back(line);
-        if (line.find("MD STEP") != std::string::npos)
-        {
-            ParseBlock(block,current.calctype);
-            block.clear();
-            AddTimestep();
-        }
-        n_frames_parsed++;
-        std::cout << "Parsed a frame. " << n_frames_parsed << std::endl;
-    }
-    ParseBlock(block, current.calctype);
-    AddTimestep();
-    file.close();
-    std::cout << "Finished parsing the file." << std::endl;
-}
+def csv_to_png(csv):
+    figfilename = csv.replace(".csv",".png")
+    consolidated_csv = csv.replace(".csv","_combined_data.csv")
+    fig = plt.figure(figsize=[8,5], dpi=300)
+    ax = fig.add_subplot(1,1,1)
+    for chunk in pd.read_csv(csv, delimiter=',', chunksize=1):
+        t_cols = [x.strip() for x in chunk.columns if "S0->" in x]
+        break
+    combined_data = {x:np.zeros(801) for x in t_cols}
+    colors = [cm.get_cmap("viridis")(x) for x in np.linspace(0,1,len(t_cols))]
+    n_spectra = 0
+    for df in pd.read_csv(csv,delimiter=',',chunksize=801,dtype=float):
+        df = df.rename(columns={x:x.strip() for x in df.columns})
+        x_values = df["Energy(nm)"]
+        for i,col in enumerate(t_cols):
+            ax.plot(x_values, df[col], color=colors[i],lw=0.5,alpha=0.05)
+            if col not in [x for x in combined_data.keys()]:
+                combined_data[col] = df[col].values
+            else:
+                combined_data[col] += df[col].values
+        n_spectra+=1
+    final_combined_data = np.zeros(801)
+    i=0
+    for key, val in combined_data.items():
+        ax.plot(x_values, val/n_spectra, color=colors[i],lw=1.0,alpha=0.75,label = key)
+        i+=1
+        final_combined_data += val/n_spectra
+    ax.plot(x_values,final_combined_data,color="k", label= "Complete Spectrum",lw=1.0)
+    ax.set_xlim(200,1000)
+    ax.set_xlabel("Energy (nm)")
+    ax.set_ylabel("Intensity")
+    ax.legend()
+    fig.savefig(figfilename,dpi=300,facecolor="white",bbox_inches="tight")
+    np.savetxt(consolidated_csv,np.asarray([x_values,final_combined_data]).T,fmt="%.04f",header="Energy(nm), Intensity",delimiter=', ')
 
-void OverallDataStructure::AddInputFile(std::string filename)
-{
-    // Identify calctype and runtype from the filename
-    JobSettings current(filename);
-
-    std::cout << "created 'current' with " << filename << std::endl;
-    // parse the file accordingly.
-    if (current.runtype == "OPT")
-    {
-        ParseOPT(current);
-    }
-
-    if (current.runtype == "BOMD")
-    {
-        ParseBOMD(current);
-    }
-    
-    if (current.runtype == "SPE")
-    {
-        ParseSPE(current);
-    }
-}
-
-void OverallDataStructure::GenerateSpectralData()
-{
-    UpdateMinMaxEnergyRange();
-    ev_ranges = {};
-    nm_ranges = {};
-    
-    // Generate energies array (in nm and eV for ease of CSV output and later parsing.)
-    for (int i = (int)min_nm; i < (int)max_nm; i++)
-    {
-        nm_ranges.push_back((double)i);
-        ev_ranges.push_back(ev_to_nm((double)i));
-    }
-    for (TimeStep ts : timesteps)
-    {
-        ts.GenerateSpectralData(ev_ranges);
-        // Iterate through all timesteps, generating spectral data for each transition
-    }
-}
-
-void OverallDataStructure::WriteOutputFile()
-{
-    // Number of lines per timestep, based on the size of the ev_ranges array of energy values.
-    int n_lines = ev_ranges.size();
-
-    // need column for ev, nm, then each transition
+if __name__ == "__main__":
+    csv_files=[]
+    for arg in sys.argv[1:]:
+        print(arg)
+        csv_files.append(arg)
+    for csv in csv_files:
+        csv_to_png(csv)
+)PYTHON";
+    std::ofstream python("tmp.py", std::ios::out);
+    python << python_script;
+    python.close();
     std::stringstream buffer;
     buffer.str("");
-    buffer << "Energy(eV), Energy(nm)";
-    for (std::string t_name : known_transition_names)
+    buffer << "python tmp.py ";
+    for (std::string csv : csv_names)
     {
-        buffer << ", " << t_name;
+        buffer << csv << " ";
     }
-    buffer << std::endl;
-
-    // for each timestep, we need the full set of columns iterated through.
-    for (TimeStep ts: timesteps)
-    {
-        // each timestep needs the energy values in eV, nM and then the intensity of each transition
-        for (int i = 0; i < n_lines; i++)
-        {
-            buffer << std::fixed << std::setprecision(5) << ev_ranges[i] << ", ";
-            buffer << std::fixed << std::setprecision(5) << nm_ranges[i];
-            for (std::string t_name : known_transition_names)
-            {
-                buffer << ", ";
-                buffer << std::fixed << std::setprecision(5) << ts.spectral_data[t_name][i];
-            }
-            buffer << std::endl;
-        }
-    }
-
-    std::ofstream ofile(output_csv_filename,std::ios::out);
-    ofile << buffer.str();
-    ofile.close();
-}
-
-void OverallDataStructure::AddTimestep()
-{
-    timesteps.push_back(TimeStep());
-}
-
-void OverallDataStructure::AddExcitation(std::string transition_name, double ene, double osc_str)
-{
-    timesteps.back().AddExcitation(transition_name, ene, osc_str);
-    if (std::find(known_transition_names.begin(), known_transition_names.end(), transition_name) == known_transition_names.end())
-    {
-        known_transition_names.push_back(transition_name);
-    }
-}
-
-void OverallDataStructure::PlotSpectra()
-{
-    // include spans for visible, IR, UV, etc. on the main plot
-    // Set x limits to the min_nm and max_nm values in this class.
-}
-
-void OverallDataStructure::reset()
-{
-    min_nm = 200;
-    max_nm = 800;
-    known_transition_names.clear();
-    // std::vector<TimeStep> timesteps;
-    timesteps.clear();
-    std::stringstream buffer;
-    int file_count = 0;
-    do
-    {
-        file_count++;
-        buffer.str("");
-        buffer << "ConsolidatedSpectralData_" << std::setw(4) << std::setfill('0') << file_count << ".csv";
-    } while (std::experimental::filesystem::exists(buffer.str()));
-    
-    output_csv_filename = buffer.str();
-    buffer.str("");
-    buffer << "ConsolidatedSpectralData_" << std::setw(4) << std::setfill('0') << file_count << ".png";
-    output_png_filename = buffer.str();
+    silent_shell(buffer.str().c_str());
 }
