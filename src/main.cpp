@@ -1,5 +1,7 @@
 #include "classes.h"
 #include "utilities.h"
+#include "tcmdir.h"
+
 
 bool DEBUGGING = false;
 bool COMBINE_FILES = false;
@@ -30,6 +32,7 @@ int main(int argc, char** argv)
         if (inp.getruntype() == "BOMD")
         {
             ParseBOMD(inp);
+            BOMD_to_IR_Spectrum(inp.filename());
         }
     }
     std::cout << "Finished Adding Input Files." << std::endl;
