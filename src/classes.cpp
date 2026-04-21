@@ -390,8 +390,9 @@ def csv_to_png(csv):
     ax.set_xlabel("Energy (nm)")
     ax.set_ylabel("Intensity")
     ax.legend()
-    fig.savefig(figfilename,dpi=300,facecolor="white",bbox_inches="tight")
     np.savetxt(consolidated_csv,np.asarray([x_values,final_combined_data]).T,fmt="%.04f",header="Energy(nm), Intensity",delimiter=', ')
+    fig.savefig(figfilename,dpi=300,facecolor="white",bbox_inches="tight")
+    
 
 if __name__ == "__main__":
     csv_files=[]
