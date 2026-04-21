@@ -410,7 +410,6 @@ if __name__ == "__main__":
     for (std::string csv : csv_names)
     {
         buffer << csv << " ";
-    }
-    buffer << "; rm tmp.py"; 
+    } 
     silent_shell(buffer.str().c_str());
 }
