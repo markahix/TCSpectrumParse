@@ -382,7 +382,7 @@ def csv_to_png(csv):
     final_combined_data = np.zeros(801)
     i=0
     for key, val in combined_data.items():
-        ax.plot(x_values, val/n_spectra, color=colors[i],lw=1.0,alpha=0.75,label = key)
+        ax.plot(x_values, val/n_spectra, color=colors[i],lw=1.0,alpha=0.75)
         i+=1
         final_combined_data += val/n_spectra
     ax.plot(x_values,final_combined_data,color="k", label= "Complete Spectrum",lw=1.0)
@@ -391,7 +391,7 @@ def csv_to_png(csv):
     ax.set_ylabel("Intensity")
     ax.legend()
     np.savetxt(consolidated_csv,np.asarray([x_values,final_combined_data]).T,fmt="%.04f",header="Energy(nm), Intensity",delimiter=', ')
-    fig.savefig(figfilename,dpi=300,facecolor="white",bbox_inches="tight")
+    fig.savefig(figfilename,dpi=300,facecolor="white")
     
 
 if __name__ == "__main__":
